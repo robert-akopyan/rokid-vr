@@ -1,0 +1,9 @@
+{
+  "driver_rokidmax": {
+    "enable": true,
+    "displayWidth": 1920,
+    "displayHeight": 1080,
+    "displayRefreshRateNumerator": 60000,
+    "displayRefreshRateDenominator": 1000
+  }
+}

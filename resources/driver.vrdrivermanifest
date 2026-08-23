@@ -1,0 +1,8 @@
+{
+  "alwaysActivate": false,
+  "name": "rokidmax",
+  "directory": "",
+  "resourceOnly": false,
+  "redirectsDisplay": true,
+  "hmd_presence": [ "04D2.162F" ]
+}
