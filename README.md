@@ -99,11 +99,13 @@ view_gain_percent=100
   while roll always stays at 1:1. This makes cockpit scanning easier without
   changing projection FOV or introducing pitch-to-roll coupling. Restart
   SteamVR after changing it; the launcher exposes the same **View gain** cycle.
-- `[input] virtual_controller=0` is the safe default. It leaves native mouse
-  and keyboard input entirely to games such as War Thunder, MSFS, and DCS.
-  Enable the optional controller only when a Vive-style pointer is needed for
-  SteamVR Dashboard, then restart SteamVR. The launcher exposes the same
-  setting as **VR mouse: OFF/ON**.
+- `[input] virtual_controller=0` is the safe startup default. It leaves native
+  mouse and keyboard input entirely to games such as War Thunder, MSFS, and
+  DCS. Press **Ctrl+Alt+M** (or the launcher's **VR mouse** button) to hot-plug
+  a Vive-style mouse pointer while SteamVR is running; press it again to
+  disconnect the controller and restore normal mouse use. No SteamVR restart
+  is required. Setting `virtual_controller=1` only enables it automatically at
+  startup.
 
 The launcher preserves the primary monitor, never enables Clone mode, and
 never makes Rokid primary.
@@ -183,7 +185,7 @@ mismatches; these entries are useful when diagnosing double horizontal images.
   output-number, and adapter changes. Switching the glasses between 2D and SBS
   can still require restarting SteamVR because the compositor chooses its
   virtual-display backbuffer geometry when the HMD activates.
-- A mouse-driven virtual controller is experimental. Positional tracking, room
+- A hot-plug mouse-driven virtual controller is experimental. Positional tracking, room
   scale, native Direct Mode, and a custom OpenXR runtime are out of scope.
 - The package uses the current MSVC runtime. Install the Microsoft Visual C++
   x64 Redistributable if SteamVR reports a missing runtime DLL.

@@ -77,6 +77,7 @@ public:
     void DebugRequest(const char* request,char* response,std::uint32_t size) override {if(!size)return;if(request&&!_stricmp(request,"recenter")){recenter();strcpy_s(response,size,"ok");}else strcpy_s(response,size,"Rokid Max 3DoF HMD");}
     vr::DriverPose_t GetPose() override {std::lock_guard lock(pose_mutex_);return pose_;}
     vr::DriverPose_t pose_snapshot(){std::lock_guard lock(pose_mutex_);return pose_;}
+    bool consume_controller_toggle(){return controller_toggle_requested_.exchange(false);}
     void run_frame(){
         const bool recenter_hotkey=(GetAsyncKeyState(VK_CONTROL)&0x8000)&&(GetAsyncKeyState(VK_MENU)&0x8000)&&(GetAsyncKeyState('R')&0x8000);
         if(recenter_hotkey&&!recenter_hotkey_down_)recenter();
@@ -101,9 +102,9 @@ private:
     vr::DriverPose_t make_pose(const HidTracker::Snapshot&s){vr::DriverPose_t p{};p.qWorldFromDriverRotation.w=1;p.qDriverFromHeadRotation.w=1;p.deviceIsConnected=s.connected;p.poseIsValid=s.connected&&s.calibrated;p.result=p.poseIsValid?vr::TrackingResult_Running_OK:vr::TrackingResult_Uninitialized;Quat q=conjugate(s.orientation);{std::lock_guard lock(center_mutex_);if(!centered_&&s.calibrated){center_angles_=euler_degrees(q);centered_=true;}if(centered_)q=recentered_euler(q,center_angles_,config_.view_gain);}p.qRotation={q.w,q.x,q.y,q.z};p.vecAngularVelocity[0]=s.angular_velocity.x*config_.view_gain;p.vecAngularVelocity[1]=s.angular_velocity.y*config_.view_gain;p.vecAngularVelocity[2]=s.angular_velocity.z;return p;}
     void on_pose(const HidTracker::Snapshot&s){const auto p=make_pose(s);{std::lock_guard lock(pose_mutex_);pose_=p;}if(object_id_!=vr::k_unTrackedDeviceIndexInvalid)vr::VRServerDriverHost()->TrackedDevicePoseUpdated(object_id_,p,sizeof(p));}
     void recenter(){const auto s=tracker_.snapshot();if(!s.calibrated){log("Recenter ignored: tracker is not calibrated");return;}{std::lock_guard lock(center_mutex_);center_angles_=euler_degrees(conjugate(s.orientation));centered_=true;}log("Recenter without axis rotation");on_pose(s);}
-    void pipe_loop(){while(!stop_){HANDLE pipe=CreateNamedPipeW(L"\\\\.\\pipe\\RokidVR",PIPE_ACCESS_INBOUND,PIPE_TYPE_MESSAGE|PIPE_READMODE_MESSAGE|PIPE_NOWAIT,1,64,64,100,nullptr);if(pipe==INVALID_HANDLE_VALUE){Sleep(500);continue;}while(!stop_){BOOL connected=ConnectNamedPipe(pipe,nullptr);DWORD e=connected?ERROR_SUCCESS:GetLastError();if(connected||e==ERROR_PIPE_CONNECTED){char command[64]{};DWORD n=0;if(ReadFile(pipe,command,sizeof(command)-1,&n,nullptr)&&!_strnicmp(command,"recenter",8))recenter();DisconnectNamedPipe(pipe);break;}if(e!=ERROR_PIPE_LISTENING&&e!=ERROR_NO_DATA)break;Sleep(50);}CloseHandle(pipe);}}
+    void pipe_loop(){while(!stop_){HANDLE pipe=CreateNamedPipeW(L"\\\\.\\pipe\\RokidVR",PIPE_ACCESS_INBOUND,PIPE_TYPE_MESSAGE|PIPE_READMODE_MESSAGE|PIPE_NOWAIT,1,64,64,100,nullptr);if(pipe==INVALID_HANDLE_VALUE){Sleep(500);continue;}while(!stop_){BOOL connected=ConnectNamedPipe(pipe,nullptr);DWORD e=connected?ERROR_SUCCESS:GetLastError();if(connected||e==ERROR_PIPE_CONNECTED){char command[64]{};DWORD n=0;if(ReadFile(pipe,command,sizeof(command)-1,&n,nullptr)){if(!_strnicmp(command,"recenter",8))recenter();else if(!_strnicmp(command,"toggle_controller",17))controller_toggle_requested_=true;}DisconnectNamedPipe(pipe);break;}if(e!=ERROR_PIPE_LISTENING&&e!=ERROR_NO_DATA)break;Sleep(50);}CloseHandle(pipe);}}
     Config config_;DisplayInfo display_{};bool display_found_{};HidTracker tracker_;std::unique_ptr<Presenter>presenter_;std::uint32_t object_id_{vr::k_unTrackedDeviceIndexInvalid};
-    std::mutex pose_mutex_,center_mutex_;vr::DriverPose_t pose_{};std::array<double,3> center_angles_{};bool centered_{},last_connected_{},desktop_query_logged_{},real_query_logged_{},recenter_hotkey_down_{};std::atomic_bool stop_{};std::thread pipe_thread_;
+    std::mutex pose_mutex_,center_mutex_;vr::DriverPose_t pose_{};std::array<double,3> center_angles_{};bool centered_{},last_connected_{},desktop_query_logged_{},real_query_logged_{},recenter_hotkey_down_{};std::atomic_bool stop_{},controller_toggle_requested_{};std::thread pipe_thread_;
 };
 
 class MouseControllerDevice final : public vr::ITrackedDeviceServerDriver {
@@ -138,6 +139,8 @@ public:
     void DebugRequest(const char*,char* response,std::uint32_t size) override {if(size)response[0]=0;}
     vr::DriverPose_t GetPose() override {return pose_;}
     void set_dashboard_visible(bool visible){dashboard_visible_=visible;}
+    void set_enabled(bool enabled){enabled_=enabled;log(std::string("Mouse controller ")+(enabled?"enabled":"disabled")+" at runtime");}
+    bool enabled() const{return enabled_;}
     void run_frame(){
         if(!active_||!hmd_)return;
         const auto now=GetTickCount64();
@@ -145,9 +148,6 @@ public:
             last_process_check_=now;const bool running=process_running(L"aces.exe");
             if(running!=game_running_){game_running_=running;log(std::string("Mouse controller ")+(running?"suspended for War Thunder":"resumed after War Thunder"));}
         }
-        const bool toggle=(GetAsyncKeyState(VK_CONTROL)&0x8000)&&(GetAsyncKeyState(VK_MENU)&0x8000)&&(GetAsyncKeyState('M')&0x8000);
-        if(toggle&&!toggle_down_){enabled_=!enabled_;log(std::string("Mouse controller ")+(enabled_?"enabled":"disabled")+" by Ctrl+Alt+M");}
-        toggle_down_=toggle;
         if(!enabled_||(game_running_&&!dashboard_visible_)){
             pose_.deviceIsConnected=false;pose_.poseIsValid=false;pose_.result=vr::TrackingResult_Uninitialized;
             vr::VRServerDriverHost()->TrackedDevicePoseUpdated(object_id_,pose_,sizeof(pose_));
@@ -176,7 +176,7 @@ public:
     }
 private:
     static bool process_running(const wchar_t* name){HANDLE snapshot=CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0);if(snapshot==INVALID_HANDLE_VALUE)return false;PROCESSENTRY32W entry{sizeof(entry)};bool found=false;if(Process32FirstW(snapshot,&entry))do{if(!_wcsicmp(entry.szExeFile,name)){found=true;break;}}while(Process32NextW(snapshot,&entry));CloseHandle(snapshot);return found;}
-    HmdDevice* hmd_{};std::uint32_t object_id_{vr::k_unTrackedDeviceIndexInvalid};bool active_{},enabled_{true},toggle_down_{},game_running_{},dashboard_visible_{};ULONGLONG last_process_check_{};vr::DriverPose_t pose_{};
+    HmdDevice* hmd_{};std::uint32_t object_id_{vr::k_unTrackedDeviceIndexInvalid};bool active_{},enabled_{true},game_running_{},dashboard_visible_{};ULONGLONG last_process_check_{};vr::DriverPose_t pose_{};
     vr::VRInputComponentHandle_t trigger_click_{},trigger_value_{},menu_click_{},system_click_{},grip_click_{},trackpad_click_{},trackpad_touch_{},trackpad_x_{},trackpad_y_{};
 };
 
@@ -213,19 +213,29 @@ private:
 
 class Provider final : public vr::IServerTrackedDeviceProvider {
 public:
-    vr::EVRInitError Init(vr::IVRDriverContext* context) override {VR_INIT_SERVER_DRIVER_CONTEXT(context);log("SteamVR driver init");vr::VRDriverLog()->Log("RokidVR: driver init");maybe_add();return vr::VRInitError_None;}
-    void Cleanup() override {controller_.reset();redirect_.reset();device_.reset();VR_CLEANUP_SERVER_DRIVER_CONTEXT();log("SteamVR driver cleanup");}
+    vr::EVRInitError Init(vr::IVRDriverContext* context) override {VR_INIT_SERVER_DRIVER_CONTEXT(context);controller_toggle_event_=CreateEventW(nullptr,FALSE,FALSE,L"Local\\RokidVRToggleController");log("SteamVR driver init");vr::VRDriverLog()->Log("RokidVR: driver init");maybe_add();return vr::VRInitError_None;}
+    void Cleanup() override {controller_.reset();redirect_.reset();device_.reset();if(controller_toggle_event_){CloseHandle(controller_toggle_event_);controller_toggle_event_=nullptr;}VR_CLEANUP_SERVER_DRIVER_CONTEXT();log("SteamVR driver cleanup");}
     const char* const* GetInterfaceVersions() override {return vr::k_InterfaceVersions;}
     void RunFrame() override {
         if(!device_)maybe_add();
+        const bool hotkey=(GetAsyncKeyState(VK_CONTROL)&0x8000)&&(GetAsyncKeyState(VK_MENU)&0x8000)&&(GetAsyncKeyState('M')&0x8000);
+        const bool requested=(hotkey&&!controller_hotkey_down_)||(controller_toggle_event_&&WaitForSingleObject(controller_toggle_event_,0)==WAIT_OBJECT_0)||(device_&&device_->consume_controller_toggle());controller_hotkey_down_=hotkey;
+        if(requested)toggle_controller();
         vr::VREvent_t event{};while(vr::VRServerDriverHost()->PollNextEvent(&event,sizeof(event))){
-            if(event.eventType==vr::VREvent_DashboardActivated){dashboard_visible_=true;log(controller_?"SteamVR Dashboard activated: optional mouse controller available":"SteamVR Dashboard activated: optional mouse controller is disabled");}
+            if(event.eventType==vr::VREvent_DashboardActivated){dashboard_visible_=true;log(controller_&&controller_->enabled()?"SteamVR Dashboard activated: optional mouse controller enabled":"SteamVR Dashboard activated: press Ctrl+Alt+M to enable VR mouse");}
             else if(event.eventType==vr::VREvent_DashboardDeactivated){dashboard_visible_=false;log("SteamVR Dashboard deactivated: game mouse protection restored");}
         }
         if(device_)device_->run_frame();if(controller_){controller_->set_dashboard_visible(dashboard_visible_);controller_->run_frame();}
     }
     bool ShouldBlockStandbyMode() override {return false;}void EnterStandby() override {}void LeaveStandby() override {}
 private:
+    bool add_controller(){
+        if(controller_||!device_)return controller_!=nullptr;
+        controller_=std::make_unique<MouseControllerDevice>(device_.get());
+        if(!vr::VRServerDriverHost()->TrackedDeviceAdded("ROKID_MOUSE_RIGHT",vr::TrackedDeviceClass_Controller,controller_.get())){log("Mouse controller hot-plug registration failed");controller_.reset();return false;}
+        log("Mouse controller hot-plugged; Ctrl+Alt+M toggles normal/VR mouse without restarting SteamVR");return true;
+    }
+    void toggle_controller(){if(!controller_){add_controller();return;}controller_->set_enabled(!controller_->enabled());}
     void maybe_add(){
         if(device_||!HidTracker::present())return;
         const auto hardware_serial=HidTracker::serial_number();
@@ -242,14 +252,9 @@ private:
             log("TrackedDeviceAdded failed");device_.reset();redirect_.reset();return;
         }
         log("Registered Rokid Max HMD serial "+serial_);
-        if(load_config().virtual_controller){
-            controller_=std::make_unique<MouseControllerDevice>(device_.get());
-            if(!vr::VRServerDriverHost()->TrackedDeviceAdded("ROKID_MOUSE_RIGHT",vr::TrackedDeviceClass_Controller,controller_.get())){
-                log("Mouse controller registration failed");controller_.reset();
-            }else log("Registered optional Rokid mouse controller");
-        }else log("Optional mouse controller disabled; native game mouse and keyboard preserved");
+        if(load_config().virtual_controller)add_controller();else log("Optional mouse controller starts absent; press Ctrl+Alt+M to hot-plug it");
     }
-    std::unique_ptr<HmdDevice>device_;std::unique_ptr<DisplayRedirectDevice>redirect_;std::unique_ptr<MouseControllerDevice>controller_;std::string serial_,redirect_serial_;bool dashboard_visible_{};
+    std::unique_ptr<HmdDevice>device_;std::unique_ptr<DisplayRedirectDevice>redirect_;std::unique_ptr<MouseControllerDevice>controller_;std::string serial_,redirect_serial_;HANDLE controller_toggle_event_{};bool dashboard_visible_{},controller_hotkey_down_{};
 };
 Provider provider;
 }
