@@ -1,5 +1,7 @@
 #include "common/config.hpp"
 #include <ShlObj.h>
+#include <algorithm>
+#include <cmath>
 #include <filesystem>
 
 namespace rokidvr {
@@ -19,6 +21,7 @@ Config load_config(){
     const auto mode=get(L"video",L"output_mode",L"auto");
     if(mode==L"mono_left")c.output_mode=OutputMode::mono_left; else if(mode==L"mono_right")c.output_mode=OutputMode::mono_right; else if(mode==L"sbs")c.output_mode=OutputMode::sbs;
     c.ipd_mm=GetPrivateProfileIntW(L"hmd",L"ipd_tenths_mm",630,config_path().c_str())/10.0;
+    c.view_gain=std::clamp(GetPrivateProfileIntW(L"hmd",L"view_gain_percent",100,config_path().c_str())/100.0,1.0,2.0);
     c.vsync=GetPrivateProfileIntW(L"video",L"vsync",1,config_path().c_str())!=0;
     c.swap_eyes=GetPrivateProfileIntW(L"video",L"swap_eyes",0,config_path().c_str())!=0;
     c.virtual_controller=GetPrivateProfileIntW(L"input",L"virtual_controller",0,config_path().c_str())!=0;
@@ -32,6 +35,8 @@ void save_config(const Config& c){
     WritePrivateProfileStringW(L"video",L"output_mode",mode,p.c_str());
     const auto ipd=std::to_wstring(static_cast<int>(c.ipd_mm*10));
     WritePrivateProfileStringW(L"hmd",L"ipd_tenths_mm",ipd.c_str(),p.c_str());
+    const auto gain=std::to_wstring(static_cast<int>(std::round(c.view_gain*100)));
+    WritePrivateProfileStringW(L"hmd",L"view_gain_percent",gain.c_str(),p.c_str());
     WritePrivateProfileStringW(L"video",L"vsync",c.vsync?L"1":L"0",p.c_str()); WritePrivateProfileStringW(L"video",L"swap_eyes",c.swap_eyes?L"1":L"0",p.c_str());
     WritePrivateProfileStringW(L"input",L"virtual_controller",c.virtual_controller?L"1":L"0",p.c_str());
     WritePrivateProfileStringW(L"display",L"id",c.display_id.c_str(),p.c_str());

@@ -9,6 +9,7 @@ struct Config {
     VideoPath video_path{VideoPath::extended};
     OutputMode output_mode{OutputMode::automatic};
     double ipd_mm{63.0};
+    double view_gain{1.0};
     bool vsync{true};
     bool swap_eyes{false};
     bool virtual_controller{false};

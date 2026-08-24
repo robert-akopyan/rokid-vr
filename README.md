@@ -81,6 +81,9 @@ path=extended
 output_mode=auto
 vsync=1
 swap_eyes=0
+
+[hmd]
+view_gain_percent=100
 ```
 
 - `path=extended`: preferred `IVRDisplayComponent` path.
@@ -92,6 +95,10 @@ swap_eyes=0
 - The launcher exposes **Output: AUTO/MONO L/MONO R/SBS** and **Swap eyes**.
   Restart SteamVR after changing either setting because SteamVR chooses the
   per-eye backbuffer geometry when the HMD activates.
+- `view_gain_percent=100|125|150|200` amplifies yaw and pitch after recentering
+  while roll always stays at 1:1. This makes cockpit scanning easier without
+  changing projection FOV or introducing pitch-to-roll coupling. Restart
+  SteamVR after changing it; the launcher exposes the same **View gain** cycle.
 - `[input] virtual_controller=0` is the safe default. It leaves native mouse
   and keyboard input entirely to games such as War Thunder, MSFS, and DCS.
   Enable the optional controller only when a Vive-style pointer is needed for

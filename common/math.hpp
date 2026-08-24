@@ -43,9 +43,10 @@ inline Quat quaternion_from_euler_degrees(std::array<double,3> ypr) {
 inline double angle_delta_degrees(double current,double center) {
     double delta=std::fmod(current-center+180.0,360.0);if(delta<0)delta+=360.0;return delta-180.0;
 }
-inline Quat recentered_euler(Quat current,std::array<double,3> center) {
+inline Quat recentered_euler(Quat current,std::array<double,3> center,double yaw_pitch_gain=1.0) {
     const auto value=euler_degrees(current);
-    return quaternion_from_euler_degrees({angle_delta_degrees(value[0],center[0]),angle_delta_degrees(value[1],center[1]),angle_delta_degrees(value[2],center[2])});
+    const double gain=std::clamp(yaw_pitch_gain,1.0,2.0);
+    return quaternion_from_euler_degrees({angle_delta_degrees(value[0],center[0])*gain,angle_delta_degrees(value[1],center[1])*gain,angle_delta_degrees(value[2],center[2])});
 }
 
 // One centralized sensor-to-OpenVR convention transform. Rokid's verified
