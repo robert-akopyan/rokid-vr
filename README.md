@@ -89,6 +89,11 @@ swap_eyes=0
 - `auto`: SBS when the active output is at least 3000 pixels wide, otherwise
   mono-left. The code enumerates actual Windows modes and does not switch or
   hard-code a 3840x1080 mode.
+- `[input] virtual_controller=0` is the safe default. It leaves native mouse
+  and keyboard input entirely to games such as War Thunder, MSFS, and DCS.
+  Enable the optional controller only when a Vive-style pointer is needed for
+  SteamVR Dashboard, then restart SteamVR. The launcher exposes the same
+  setting as **VR mouse: OFF/ON**.
 
 The launcher preserves the primary monitor, never enables Clone mode, and
 never makes Rokid primary.

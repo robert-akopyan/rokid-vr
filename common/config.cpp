@@ -21,6 +21,7 @@ Config load_config(){
     c.ipd_mm=GetPrivateProfileIntW(L"hmd",L"ipd_tenths_mm",630,config_path().c_str())/10.0;
     c.vsync=GetPrivateProfileIntW(L"video",L"vsync",1,config_path().c_str())!=0;
     c.swap_eyes=GetPrivateProfileIntW(L"video",L"swap_eyes",0,config_path().c_str())!=0;
+    c.virtual_controller=GetPrivateProfileIntW(L"input",L"virtual_controller",0,config_path().c_str())!=0;
     c.display_id=get(L"display",L"id",L""); return c;
 }
 void save_config(const Config& c){
@@ -32,6 +33,7 @@ void save_config(const Config& c){
     const auto ipd=std::to_wstring(static_cast<int>(c.ipd_mm*10));
     WritePrivateProfileStringW(L"hmd",L"ipd_tenths_mm",ipd.c_str(),p.c_str());
     WritePrivateProfileStringW(L"video",L"vsync",c.vsync?L"1":L"0",p.c_str()); WritePrivateProfileStringW(L"video",L"swap_eyes",c.swap_eyes?L"1":L"0",p.c_str());
+    WritePrivateProfileStringW(L"input",L"virtual_controller",c.virtual_controller?L"1":L"0",p.c_str());
     WritePrivateProfileStringW(L"display",L"id",c.display_id.c_str(),p.c_str());
 }
 }

@@ -219,7 +219,7 @@ public:
     void RunFrame() override {
         if(!device_)maybe_add();
         vr::VREvent_t event{};while(vr::VRServerDriverHost()->PollNextEvent(&event,sizeof(event))){
-            if(event.eventType==vr::VREvent_DashboardActivated){dashboard_visible_=true;log("SteamVR Dashboard activated: mouse controller available");}
+            if(event.eventType==vr::VREvent_DashboardActivated){dashboard_visible_=true;log(controller_?"SteamVR Dashboard activated: optional mouse controller available":"SteamVR Dashboard activated: optional mouse controller is disabled");}
             else if(event.eventType==vr::VREvent_DashboardDeactivated){dashboard_visible_=false;log("SteamVR Dashboard deactivated: game mouse protection restored");}
         }
         if(device_)device_->run_frame();if(controller_){controller_->set_dashboard_visible(dashboard_visible_);controller_->run_frame();}
@@ -242,10 +242,12 @@ private:
             log("TrackedDeviceAdded failed");device_.reset();redirect_.reset();return;
         }
         log("Registered Rokid Max HMD serial "+serial_);
-        controller_=std::make_unique<MouseControllerDevice>(device_.get());
-        if(!vr::VRServerDriverHost()->TrackedDeviceAdded("ROKID_MOUSE_RIGHT",vr::TrackedDeviceClass_Controller,controller_.get())){
-            log("Mouse controller registration failed");controller_.reset();
-        }else log("Registered Rokid mouse controller");
+        if(load_config().virtual_controller){
+            controller_=std::make_unique<MouseControllerDevice>(device_.get());
+            if(!vr::VRServerDriverHost()->TrackedDeviceAdded("ROKID_MOUSE_RIGHT",vr::TrackedDeviceClass_Controller,controller_.get())){
+                log("Mouse controller registration failed");controller_.reset();
+            }else log("Registered optional Rokid mouse controller");
+        }else log("Optional mouse controller disabled; native game mouse and keyboard preserved");
     }
     std::unique_ptr<HmdDevice>device_;std::unique_ptr<DisplayRedirectDevice>redirect_;std::unique_ptr<MouseControllerDevice>controller_;std::string serial_,redirect_serial_;bool dashboard_visible_{};
 };

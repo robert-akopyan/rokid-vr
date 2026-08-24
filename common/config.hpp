@@ -11,6 +11,7 @@ struct Config {
     double ipd_mm{63.0};
     bool vsync{true};
     bool swap_eyes{false};
+    bool virtual_controller{false};
     std::wstring display_id;
 };
 std::wstring data_directory();
