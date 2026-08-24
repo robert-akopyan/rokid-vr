@@ -17,7 +17,7 @@ private:
     DisplayInfo display_;Config config_;HWND window_{};HANDLE frame_wait_{};std::uint64_t frames_{};LARGE_INTEGER last_present_{},frequency_{};
     Microsoft::WRL::ComPtr<ID3D11Device> device_;Microsoft::WRL::ComPtr<ID3D11DeviceContext> context_;Microsoft::WRL::ComPtr<IDXGISwapChain2> swapchain_;
     Microsoft::WRL::ComPtr<ID3D11VertexShader> vs_;Microsoft::WRL::ComPtr<ID3D11PixelShader> ps_;Microsoft::WRL::ComPtr<ID3D11SamplerState> sampler_;Microsoft::WRL::ComPtr<ID3D11Buffer> constants_;
-    HANDLE last_handle_{};ULONGLONG next_display_probe_{};bool first_frame_logged_{},display_available_{},display_refresh_requested_{true},display_loss_logged_{};
+    HANDLE last_handle_{};ULONGLONG next_display_probe_{};bool first_frame_logged_{},source_description_logged_{},mode_description_logged_{},display_available_{},display_refresh_requested_{true},display_loss_logged_{};
     Microsoft::WRL::ComPtr<ID3D11Texture2D> source_;Microsoft::WRL::ComPtr<ID3D11ShaderResourceView> source_view_;
 };
 }

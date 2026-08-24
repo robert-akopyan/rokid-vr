@@ -89,6 +89,9 @@ swap_eyes=0
 - `auto`: SBS when the active output is at least 3000 pixels wide, otherwise
   mono-left. The code enumerates actual Windows modes and does not switch or
   hard-code a 3840x1080 mode.
+- The launcher exposes **Output: AUTO/MONO L/MONO R/SBS** and **Swap eyes**.
+  Restart SteamVR after changing either setting because SteamVR chooses the
+  per-eye backbuffer geometry when the HMD activates.
 - `[input] virtual_controller=0` is the safe default. It leaves native mouse
   and keyboard input entirely to games such as War Thunder, MSFS, and DCS.
   Enable the optional controller only when a Vive-style pointer is needed for
@@ -137,7 +140,9 @@ build\package\RokidVRLauncher.exe --diagnose
 ```
 
 Logs are written to `%LOCALAPPDATA%\RokidVR\logs\rokidvr.log`. Normal logging
-does not include every IMU packet.
+does not include every IMU packet. The presenter records the SteamVR shared
+texture size, physical Rokid mode, resolved MONO/SBS mode, and suspicious mode
+mismatches; these entries are useful when diagnosing double horizontal images.
 
 ## Current verification status
 
