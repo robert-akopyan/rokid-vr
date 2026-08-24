@@ -13,6 +13,6 @@ struct DisplayInfo {
 };
 std::vector<DisplayInfo> enumerate_displays();
 bool select_rokid_display(const std::wstring& configured_id,DisplayInfo& result);
+bool same_display_configuration(const DisplayInfo& left,const DisplayInfo& right);
 std::wstring describe_display(const DisplayInfo& display);
 }
-

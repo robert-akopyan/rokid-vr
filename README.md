@@ -34,7 +34,10 @@ SteamVR application -> SteamVR compositor -----------+
 The default `extended` video path lets SteamVR own the window on the real
 desktop-connected display. The fallback `virtual` path opens SteamVR's shared
 texture on the Rokid GPU and draws it to a two-buffer flip-model swap chain.
-There is no per-frame GPU-to-CPU-to-GPU copy.
+There is no per-frame GPU-to-CPU-to-GPU copy. The virtual presenter monitors
+Windows display-topology changes, releases stale DXGI resources when the Rokid
+output disappears, and recreates its fullscreen window and swap chain at the
+new coordinates when the display returns.
 
 ## Build
 
@@ -141,7 +144,9 @@ does not include every IMU packet.
 - D3D11 presenter: shared GPU texture, shader, flip-model swap chain, frame
   wait, and borderless output were smoke-tested successfully on the physical
   Rokid Max display at 1920x1080@60 Hz on an RTX 4060. Auto, mono-left,
-  mono-right, and SBS shader paths all presented successfully.
+  mono-right, and SBS shader paths all presented successfully. Recovery from
+  an initially missing display and from stale desktop coordinates is covered
+  by the physical presenter smoke test.
 - Live Rokid HID: verified on `MI_02`, with successful calibration and a
   measured 444-445 packets/s.
 - SteamVR 2.16.7 enumeration, physical axis-direction and recenter checks,
@@ -157,9 +162,10 @@ does not include every IMU packet.
   uses the current `IVRVirtualDisplay_002` signature.
 - Mode switching through the Rokid hardware button remains manual. RokidVR only
   consumes modes Windows reports; it does not send undocumented mode commands.
-- The virtual presenter currently needs SteamVR to be restarted after the
-  Windows display topology changes (for example, when the primary monitor is
-  disconnected).
+- The virtual presenter automatically follows coordinate, resolution, refresh,
+  output-number, and adapter changes. Switching the glasses between 2D and SBS
+  can still require restarting SteamVR because the compositor chooses its
+  virtual-display backbuffer geometry when the HMD activates.
 - A mouse-driven virtual controller is experimental. Positional tracking, room
   scale, native Direct Mode, and a custom OpenXR runtime are out of scope.
 - The package uses the current MSVC runtime. Install the Microsoft Visual C++

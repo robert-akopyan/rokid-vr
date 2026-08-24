@@ -201,7 +201,7 @@ public:
     vr::DriverPose_t GetPose() override {vr::DriverPose_t p{};p.qWorldFromDriverRotation.w=1;p.qDriverFromHeadRotation.w=1;p.qRotation.w=1;p.poseIsValid=true;p.deviceIsConnected=true;p.result=vr::TrackingResult_Running_OK;return p;}
     void Present(const vr::PresentInfo_t* info,std::uint32_t size) override {
         if(!first_present_logged_){log("Virtual display Present called: info size="+std::to_string(size)+(info?", frame="+std::to_string(info->nFrameId):", null info"));first_present_logged_=true;}
-        if(!info||size<sizeof(vr::PresentInfo_t)||!display_found_)return;
+        if(!info||size<sizeof(vr::PresentInfo_t))return;
         if(!presenter_)presenter_=std::make_unique<Presenter>(display_,config_);
         presenter_->present(reinterpret_cast<HANDLE>(info->backbufferTextureHandle));
     }

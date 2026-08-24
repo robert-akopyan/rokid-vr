@@ -25,6 +25,11 @@ std::vector<DisplayInfo> enumerate_displays(){
     return out;
 }
 bool select_rokid_display(const std::wstring& id,DisplayInfo& result){auto all=enumerate_displays();if(!id.empty())for(auto&d:all)if(d.device_path==id||d.gdi_name==id){result=std::move(d);return true;}for(auto&d:all)if(d.rokid){result=std::move(d);return true;}return false;}
+bool same_display_configuration(const DisplayInfo&a,const DisplayInfo&b){
+    return a.device_path==b.device_path&&a.gdi_name==b.gdi_name&&
+        a.adapter_luid.HighPart==b.adapter_luid.HighPart&&a.adapter_luid.LowPart==b.adapter_luid.LowPart&&
+        EqualRect(&a.bounds,&b.bounds)&&a.current.width==b.current.width&&a.current.height==b.current.height&&
+        std::abs(a.current.refresh_hz-b.current.refresh_hz)<.1;
+}
 std::wstring describe_display(const DisplayInfo& d){std::wostringstream s;s<<(d.friendly_name.empty()?L"Unnamed display":d.friendly_name)<<L" ["<<d.gdi_name<<L"] "<<d.current.width<<L"x"<<d.current.height<<L" @ "<<d.current.refresh_hz<<L" Hz, desktop ("<<d.bounds.left<<L","<<d.bounds.top<<L"), adapter "<<d.adapter_name<<L", output "<<d.output_name;return s.str();}
 }
-
