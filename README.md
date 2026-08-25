@@ -7,7 +7,8 @@ TrackIR, FreeTrack, UDP, or mouse emulation.
 ## Quick Start
 
 1. Connect Rokid Max as an extended Windows display and USB HID.
-2. Install SteamVR, then run `install-driver.ps1` once from `build\package`.
+2. Install SteamVR, then download and run `RokidVR-Setup-*.exe` from the
+   [latest GitHub Release](https://github.com/robert-akopyan/rokid-vr/releases/latest).
 3. Start `RokidVRLauncher.exe`; USB and Display must be detected.
 4. Keep the glasses still for about three seconds while the IMU calibrates.
 5. Click **Start SteamVR**. Use **Ctrl+Alt+R** to recenter.
@@ -58,7 +59,43 @@ build\package\rokidmax\driver.vrdrivermanifest
 build\package\rokidmax\bin\win64\driver_rokidmax.dll
 ```
 
-## Installation
+## Windows 11 installer
+
+Download `RokidVR-Setup-<version>.exe` from
+[GitHub Releases](https://github.com/robert-akopyan/rokid-vr/releases). The
+installer requires 64-bit Windows 11 and an installed copy of SteamVR. It:
+
+- installs RokidVR under `C:\Program Files\RokidVR`;
+- registers the external driver with SteamVR using Valve's `vrpathreg` tool;
+- creates a Start menu shortcut and offers an optional desktop shortcut;
+- includes the launcher, driver, configuration example, license, and notices;
+- unregisters the SteamVR driver during uninstall without modifying SteamVR;
+- carries the static MSVC runtime, so no separate Visual C++ Redistributable is
+  required.
+
+Close SteamVR before installing, upgrading, or uninstalling RokidVR, then start
+it again afterward. Current development builds are unsigned, so Windows
+SmartScreen may show an **Unknown publisher** warning. Verify that the installer
+was downloaded from this repository's Releases page before choosing **Run
+anyway**.
+
+### Build the installer
+
+Install [Inno Setup 6](https://jrsoftware.org/isinfo.php), configure and build
+the Release package, then build the CMake installer target:
+
+```powershell
+cmake -S . -B build -A x64
+cmake --build build --config Release
+cmake --build build --config Release --target windows_installer
+```
+
+The result is written to `build\installer\RokidVR-Setup-<version>.exe`.
+Pushing a version tag such as `v0.1.5` runs the Windows release workflow,
+executes the tests, builds this installer, and attaches it to the corresponding
+GitHub Release automatically.
+
+## Manual installation
 
 The scripts use SteamVR's supported external-driver registration and do not
 copy into or modify the SteamVR installation:
@@ -187,8 +224,7 @@ mismatches; these entries are useful when diagnosing double horizontal images.
   virtual-display backbuffer geometry when the HMD activates.
 - A hot-plug mouse-driven virtual controller is experimental. Positional tracking, room
   scale, native Direct Mode, and a custom OpenXR runtime are out of scope.
-- The package uses the current MSVC runtime. Install the Microsoft Visual C++
-  x64 Redistributable if SteamVR reports a missing runtime DLL.
+- The installer and packaged binaries use the statically linked MSVC runtime.
 
 ## References
 

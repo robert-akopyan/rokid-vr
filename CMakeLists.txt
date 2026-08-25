@@ -8,6 +8,7 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 # Pinned current OpenVR SDK revision (2026-03-27). The server-driver API is
 # header-only, so avoid downloading/building the complete SDK.
@@ -85,3 +86,16 @@ add_custom_command(TARGET RokidVRLauncher POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/README.md ${PACKAGE_ROOT}/
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${PACKAGE_ROOT}/
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/THIRD_PARTY_NOTICES.md ${PACKAGE_ROOT}/)
+
+find_program(ISCC_EXECUTABLE NAMES ISCC ISCC.exe
+  PATHS
+    "$ENV{LOCALAPPDATA}/Programs/Inno Setup 6"
+    "C:/Program Files (x86)/Inno Setup 6"
+    "C:/Program Files/Inno Setup 6")
+if(ISCC_EXECUTABLE)
+  add_custom_target(windows_installer
+    COMMAND ${ISCC_EXECUTABLE} /DMyAppVersion=${PROJECT_VERSION} ${CMAKE_CURRENT_SOURCE_DIR}/installer/RokidVR.iss
+    DEPENDS driver_rokidmax RokidVRLauncher
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMENT "Building Windows installer")
+endif()
